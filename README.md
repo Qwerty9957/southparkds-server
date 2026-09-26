@@ -62,6 +62,13 @@ see "Set-up" below. `tools/` holds the prebuilt FastVideoDSEncoder and player.
    `index.seasons` (use `"max": N` for seasons 1..N, or list `episodes`
    explicitly).
 
+   With `index.auto` left `true` (default) the season/episode list is instead
+   refreshed **automatically from TVMaze on every server restart** - new
+   seasons/episodes show up with no config edits. `index.maxSeason` caps the
+   seasons served (`null` = all). TVMaze's answer is disk-cached in
+   `index_cache.json` (<1 day, survives offline starts); if TVMaze is
+   unreachable the static `index.seasons` block is used as a fallback.
+
 2. Double-click **SouthparkDS Server** on the Desktop (or run `start-server.bat`).
    A console shows the LAN address, e.g. `http://10.0.0.39/`.
 

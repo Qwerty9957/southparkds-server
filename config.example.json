@@ -24,8 +24,11 @@
   },
 
   "index": {
-    "_comment": "Episode list shown to the DSi. Either list episodes explicitly,",
-    "_comment2": "or use \"max\" to auto-generate episode 1..max.",
+    "_comment": "Episode list shown to the DSi.",
+    "_comment_auto": "auto=true refreshes the season/episode list from TVMaze on every server restart (disk-cached for <1 day; falls back to the static block below if TVMaze is unreachable). auto=false uses only the static block.",
+    "_comment_maxseason": "maxSeason caps how many seasons are served (null = all from the source).",
+    "auto": true,
+    "maxSeason": null,
     "seasons": [
       { "season": 1, "max": 13 },
       { "season": 2, "max": 18 },

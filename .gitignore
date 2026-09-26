@@ -3,6 +3,7 @@ cache/
 __pycache__/
 *.pyc
 server.log
+index_cache.json
 
 # live Firefox profiles (session cookies) copied/swapped by wco.py
 wco-profile/

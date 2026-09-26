@@ -69,7 +69,12 @@ def time_str():
     return _time.strftime("%H:%M:%S")
 
 
+INDEX = None  # set by load_index() at startup; served as /index.json
+
+
 def build_index():
+    if INDEX is not None:
+        return INDEX
     out = []
     for item in CONFIG["index"]["seasons"]:
         season = int(item["season"])
@@ -79,6 +84,92 @@ def build_index():
             eps = list(range(1, int(item.get("max", 13)) + 1))
         out.append({"season": season, "episodes": eps})
     return {"seasons": out}
+
+
+TVMAZE_SEARCH = "https://api.tvmaze.com/singlesearch/shows?q=south%20park&embed=episodes"
+INDEX_CACHE = os.path.join(BASE_DIR, "index_cache.json")
+INDEX_TTL = 24 * 3600  # hours between upstream refreshes (started max once, on restart)
+
+
+def fetch_tvmaze_index():
+    """Season/episode list from TVMaze (public API, no key, actively
+    maintained). Returns {"seasons": [...]} or None on failure."""
+    try:
+        req = urllib.request.Request(TVMAZE_SEARCH,
+                                     headers={"User-Agent": "SouthparkDS/1.0"})
+        data = json.loads(urllib.request.urlopen(req, timeout=30)
+                          .read().decode("utf-8", "replace"))
+    except Exception as ex:  # noqa: BLE001
+        log("TVMaze fetch failed: %s" % ex)
+        return None
+    by_season = {}
+    for e in data.get("_embedded", {}).get("episodes", []):
+        n = e.get("number")
+        if n is None:  # specials / unaired placeholders
+            continue
+        by_season.setdefault(int(e["season"]), []).append(int(n))
+    seasons = [{"season": s, "episodes": sorted(by_season[s])}
+               for s in sorted(by_season)]
+    log("TVMaze: %d seasons, %d episodes" %
+        (len(seasons), sum(len(s["episodes"]) for s in seasons)))
+    return {"seasons": seasons}
+
+
+def _load_index_cache():
+    try:
+        with open(INDEX_CACHE, encoding="utf-8") as fh:
+            return json.load(fh)
+    except Exception:
+        return None
+
+
+def _save_index_cache(idx):
+    try:
+        with open(INDEX_CACHE, "w", encoding="utf-8") as fh:
+            json.dump(idx, fh)
+    except OSError:
+        pass
+
+
+def _capped(idx):
+    cap = CONFIG.get("index", {}).get("maxSeason")
+    if cap is None:
+        return idx
+    return {"seasons": [s for s in idx["seasons"] if s["season"] <= int(cap)]}
+
+
+def load_index():
+    """The episode list served as /index.json, computed once at startup.
+
+    With index.auto = true (default) it refreshes from TVMaze on every server
+    restart (a <1 day old disk cache or an unreachable TVMaze keep the last
+    known list). index.maxSeason caps the seasons served. With index.auto =
+    false the static index.seasons block from config.json is used as-is.
+    """
+    if not CONFIG.get("index", {}).get("auto", True):
+        idx = _capped(build_index())
+        log("index: static (config.json) - %d seasons" % len(idx["seasons"]))
+        return idx
+
+    fresh = None
+    try:
+        if _time.time() - os.path.getmtime(INDEX_CACHE) < INDEX_TTL:
+            fresh = _load_index_cache()
+    except OSError:
+        pass
+    if not fresh:
+        fresh = fetch_tvmaze_index()
+        if fresh:
+            _save_index_cache(fresh)
+    if fresh:
+        idx = _capped(fresh)
+        log("index: TVMaze (auto) - %d seasons" % len(idx["seasons"]))
+        return idx
+
+    idx = _capped(build_index())
+    log("index: TVMaze unreachable, falling back to config.json - %d seasons"
+        % len(idx["seasons"]))
+    return idx
 
 
 def _cleanup(*paths):
@@ -379,10 +470,13 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
+    global INDEX
     os.makedirs(CACHE, exist_ok=True)
     pid = os.path.join(BASE_DIR, "server.pid")
     with open(pid, "w", encoding="utf-8") as fh:
         fh.write(str(os.getpid()))
+
+    INDEX = load_index()
 
     port = int(CONFIG.get("port", 8080))
     httpd = ThreadingHTTPServer(("0.0.0.0", port), Handler)
@@ -398,10 +492,13 @@ def main():
 
     print("=" * 56, flush=True)
     print("SouthparkDS server running.")
-    if WCO_ENABLED:
-        print("  Source         : wco.tv (browser-minted embed token + curl_cffi)")
-    else:
-        print("  Source         : wco.tv DISABLED (set wco.enabled=true in config.json)")
+    src = "wco.tv (browser-minted embed token + curl_cffi)" if WCO_ENABLED \
+        else "wco.tv DISABLED (set wco.enabled=true in config.json)"
+    idx_src = "TVMaze (auto)" if CONFIG.get("index", {}).get("auto", True) \
+        else "config.json (static)"
+    print("  Source         : %s" % src)
+    print("  Episode index  : %s (%d seasons served)" %
+          (idx_src, len(INDEX["seasons"])))
     print("  Listen         : port %d on all interfaces" % port)
     print("  Cache dir      : %s" % CACHE)
     try:
