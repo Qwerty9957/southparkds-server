@@ -1,0 +1,26 @@
+# SouthparkDS ngrok tunnel for the DSi app.
+#
+# STEP 1 - add your authtoken once:
+#   1. open https://dashboard.ngrok.com/get-started/your-authtoken
+#   2. replace ADD_YOUR_NGROK_AUTHTOKEN_HERE below with your token.
+#
+# STEP 2 - run start-tunnel.bat (ngrok opens its own window).
+#
+# The tunnel is forced to PLAIN HTTP (url: http://) on purpose: the DSi
+# homebrew socket stack has no TLS, so an https tunnel (or a redirect to one)
+# cannot be used from the device.
+#
+# (Optional, paid/static only) reserve a domain at https://dashboard.ngrok.com
+# and change the endpoint url to e.g.  url: http://yourname.ngrok-free.app
+# so the address stays the same between restarts.
+version: "3"
+
+agent:
+  authtoken: ADD_YOUR_NGROK_AUTHTOKEN_HERE
+
+endpoints:
+  - name: southparkds
+    description: SouthparkDS server - plain HTTP only
+    url: http://
+    upstream:
+      url: http://localhost:8080

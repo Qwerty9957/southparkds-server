@@ -1,0 +1,16 @@
+# runtime / machine-specific state (never commit)
+cache/
+__pycache__/
+*.pyc
+server.log
+
+# live Firefox profiles (session cookies) copied/swapped by wco.py
+wco-profile/
+wco-profile-ff/
+
+# secrets / local config (copy the *.example files instead)
+ngrok.yml
+config.json
+
+# local tool binaries (large, machine-specific)
+tools/

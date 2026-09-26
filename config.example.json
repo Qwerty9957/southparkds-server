@@ -1,0 +1,57 @@
+{
+  "port": 8080,
+
+  "_comment_api": "YOUR API URL. It must return, for a request like",
+  "_comment_api2": "    <url>76479/1/2        (tmdbId / season / episode)",
+  "_comment_api3": "a JSON array like:  [ { \"name\": \"\", \"image\": \"\", \"mediaId\": \"996\", \"stream\": \"https://...m3u8\" } ]",
+  "api": {
+    "source": "wco",
+    "_comment_source": "\"wco\" = download each episode from wco.tv (see the wco block below). Set this to anything else to use the JSON API mode and supply api.url + queryTemplate.",
+    "url": "",
+    "tmdbId": "76479",
+    "type": "tv",
+    "streamIndex": 0,
+    "queryTemplate": "{url}{tmdbId}/{season}/{episode}"
+  },
+
+  "wco": {
+    "_comment": "Primary source. The trusted Firefox profile (wco-profile-ff) opens the episode page only to mint the signed embed token; everything after that runs as plain HTTP via curl_cffi (player page -> getvidlink.php -> getvid?evid= -> direct mp4). Mirrors are tried in turn; paced retries help against embed-host throttling. 'proxy' optionally routes ONLY the tiny browser/token step through a rotating residential proxy (hybrid mode, cost ~zero) - use a sticky-session endpoint so one episode keeps a single exit IP. headed=true to watch the browser work.",
+    "enabled": true,
+    "headed": false,
+    "retries": 2,
+    "profile": "wco-profile-ff",
+    "proxy": null
+  },
+
+  "index": {
+    "_comment": "Episode list shown to the DSi. Either list episodes explicitly,",
+    "_comment2": "or use \"max\" to auto-generate episode 1..max.",
+    "seasons": [
+      { "season": 1, "max": 13 },
+      { "season": 2, "max": 18 },
+      { "season": 3, "max": 17 },
+      { "season": 4, "max": 17 },
+      { "season": 5, "max": 14 },
+      { "season": 6, "max": 17 },
+      { "season": 7, "max": 15 },
+      { "season": 8, "max": 14 },
+      { "season": 9, "max": 14 },
+      { "season": 10, "max": 14 },
+      { "season": 11, "max": 14 },
+      { "season": 12, "max": 14 },
+      { "season": 13, "max": 14 }
+    ]
+  },
+
+  "video": {
+    "height": 240,
+    "fps": 20,
+    "crf": 24,
+    "jobs": 1
+  },
+
+  "cacheDir": "cache",
+
+  "ffmpeg": "C:\\path\\to\\ffmpeg.exe",
+  "encoder": "C:\\path\\to\\FastVideoDS.bat"
+}
