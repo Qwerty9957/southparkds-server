@@ -172,6 +172,19 @@ def load_index():
     return idx
 
 
+def _ngrok_public_url():
+    """Return the running ngrok tunnel's plain-HTTP public URL, or None."""
+    try:
+        req = urllib.request.urlopen("http://127.0.0.1:4040/api/tunnels", timeout=3)
+        data = json.loads(req.read().decode("utf-8", "replace"))
+        for t in data.get("tunnels", []):
+            if str(t.get("public_url", "")).startswith("http://"):
+                return t["public_url"]
+    except Exception:  # noqa: BLE001
+        pass
+    return None
+
+
 def _cleanup(*paths):
     for p in paths:
         try:
@@ -499,6 +512,11 @@ def main():
     print("  Source         : %s" % src)
     print("  Episode index  : %s (%d seasons served)" %
           (idx_src, len(INDEX["seasons"])))
+    try:
+        ng_url = _ngrok_public_url()
+        print("  ngrok tunnel   : %s" % (ng_url or "not running (use start-tunnel.bat)"))
+    except Exception:  # noqa: BLE001
+        pass
     print("  Listen         : port %d on all interfaces" % port)
     print("  Cache dir      : %s" % CACHE)
     try:
